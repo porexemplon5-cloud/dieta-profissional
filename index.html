@@ -258,59 +258,50 @@ const ALIMENTOS_PADRAO = [
 ];
 
 // ===================== STORAGE (com tratamento de erro robusto) =====================
+// Detecta se localStorage funciona
+let storageDisponivel = false;
+try {
+  localStorage.setItem('__test__', '1');
+  localStorage.removeItem('__test__');
+  storageDisponivel = true;
+} catch(e) {
+  storageDisponivel = false;
+  console.warn('localStorage não disponível - rodando em modo memória');
+}
+
 function carregarTudo(){
-  // Carregar alimentos
-  let alimentosOk = false;
-  try{
-    const a = localStorage.getItem('alimentos_v2');
-    if(a){
-      const parsed = JSON.parse(a);
-      if(Array.isArray(parsed) && parsed.length > 0){
-        // Garante que todo alimento tenha campo fibra (migração de dados antigos)
-        alimentos = parsed.map(al => ({
-          ...al,
-          fibra: typeof al.fibra === 'number' ? al.fibra : 0
-        }));
-        alimentosOk = true;
-      }
+  try {
+    // CARREGAR ALIMENTOS
+    let alimentosOk = false;
+    if(storageDisponivel){
+      try{
+        const a = localStorage.getItem('alimentos_v2');
+        if(a){
+          const parsed = JSON.parse(a);
+          if(Array.isArray(parsed) && parsed.length > 0){
+            alimentos = parsed.filter(al => al && typeof al.n === 'string' && typeof al.kcal === 'number').map(al => ({
+              n: al.n,
+              kcal: Number(al.kcal) || 0,
+              carb: Number(al.carb) || 0,
+              prot: Number(al.prot) || 0,
+              gord: Number(al.gord) || 0,
+              fibra: Number(al.fibra) || 0,
+              tipo: al.tipo === 'unidade' ? 'unidade' : 'peso',
+              ...(al.tipo === 'unidade' ? { tamanho: Number(al.tamanho) || 100, medida: al.medida || 'g' } : {})
+            }));
+            if(alimentos.length > 0) alimentosOk = true;
+          }
+        }
+      }catch(e){ console.error('Erro ao carregar alimentos:', e); alimentos = []; }
     }
-  }catch(e){ console.error('Erro ao carregar alimentos:', e); }
 
-  if(!alimentosOk){
-    alimentos = JSON.parse(JSON.stringify(ALIMENTOS_PADRAO));
-    salvarAlimentosStorage();
-  } else {
-    // Adiciona alimentos novos do padrão que não estão na lista (por nome)
-    const nomesExistentes = new Set(alimentos.map(a => a.n.toLowerCase().trim()));
-    const novos = ALIMENTOS_PADRAO.filter(a => !nomesExistentes.has(a.n.toLowerCase().trim()));
-    if(novos.length > 0){
-      alimentos = alimentos.concat(novos);
-      salvarAlimentosStorage();
-    }
-  }
-
-  // Carregar metas
-  try{
-    const m = localStorage.getItem('metas');
-    if(m){
-      const parsed = JSON.parse(m);
-      // Garante campo fibra
-      if(!parsed.fibra) parsed.fibra = [25, 35];
-      metas = parsed;
-    }
-  }catch(e){ console.error('Erro ao carregar metas:', e); }
-
-  // Carregar diário
-  try{
-    const d = localStorage.getItem('diario');
-    if(d){
-      const parsed = JSON.parse(d);
-      if(Array.isArray(parsed) && parsed.length === 4){
-        // Garante que itens antigos tenham fibra
-        diario = parsed.map(ref => ref.map(it => ({
-          ...it,
-          alim: { ...it.alim, fibra: typeof it.alim.fibra === 'number' ? it.alim.fibra : 0 }
-        })));
-      }
-    }
-  }catch(e){ console.error('
+    if(!alimentosOk){
+      alimentos = JSON.parse(JSON.stringify(ALIMENTOS_PADRAO));
+      salvarAlimentosStorage(); // tenta salvar mas se falhar não importa
+    } else {
+      const nomesExistentes = new Set(alimentos.map(a => a.n.toLowerCase().trim()));
+      const novos = ALIMENTOS_PADRAO.filter(a => !nomesExistentes.has(a.n.toLowerCase().trim()));
+      if(novos.length > 0){
+        alimentos = alimentos.concat(novos);
+        salvarAlimentosStorage();
+  
