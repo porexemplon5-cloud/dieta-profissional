@@ -304,4 +304,306 @@ function carregarTudo(){
       if(novos.length > 0){
         alimentos = alimentos.concat(novos);
         salvarAlimentosStorage();
+            }
+  }
+
+  // Carregar metas
+  try{
+    const m = localStorage.getItem('metas');
+    if(m){
+      const parsed = JSON.parse(m);
+      // Garante campo fibra
+      if(!parsed.fibra) parsed.fibra = [25, 35];
+      metas = parsed;
+    }
+  }catch(e){ console.error('Erro ao carregar metas:', e); }
+
+  // Carregar diário
+  try{
+    const d = localStorage.getItem('diario');
+    if(d){
+      const parsed = JSON.parse(d);
+      if(Array.isArray(parsed) && parsed.length === 4){
+        // Garante que itens antigos tenham fibra
+        diario = parsed.map(ref => ref.map(it => ({
+          ...it,
+          alim: { ...it.alim, fibra: typeof it.alim.fibra === 'number' ? it.alim.fibra : 0 }
+        })));
+      }
+    }
+  }catch(e){ console.error('Erro ao carregar diário:', e); diario = [[],[],[],[]]; }
+
+  renderTudo();
+}
+
+function salvarAlimentosStorage(){ try{ localStorage.setItem('alimentos_v2', JSON.stringify(alimentos)); }catch(e){ mostrarErro('Erro ao salvar alimentos'); } }
+function salvarDiarioStorage(){ try{ localStorage.setItem('diario', JSON.stringify(diario)); }catch(e){ mostrarErro('Erro ao salvar diário'); } }
+function salvarMetasStorage(){ try{ localStorage.setItem('metas', JSON.stringify(metas)); }catch(e){ mostrarErro('Erro ao salvar metas'); } }
+
+function mostrarErro(msg){
+  document.getElementById('erro-area').innerHTML = `<div class="reset-warning">${msg}. Se o problema persistir, clique em "Resetar Tudo" na aba Metas.</div>`;
+  setTimeout(()=>{ document.getElementById('erro-area').innerHTML = ''; }, 5000);
+}
+
+function resetarTudo(){
+  if(!confirm('Isso vai APAGAR todos os alimentos cadastrados, refeições do dia e metas. Tem certeza?')) return;
+  localStorage.removeItem('alimentos_v2');
+  localStorage.removeItem('diario');
+  localStorage.removeItem('metas');
+  location.reload();
+}
+
+// ===================== HELPERS =====================
+function statusClass(v, faixa){ if(v < faixa[0]) return 'low'; if(v > faixa[1]) return 'high'; return 'ok'; }
+
+function calcMacros(alim, qtd){
+  const fibra = typeof alim.fibra === 'number' ? alim.fibra : 0;
+  if(alim.tipo === 'unidade'){
+    return { kcal: alim.kcal * qtd, carb: alim.carb * qtd, prot: alim.prot * qtd, gord: alim.gord * qtd, fibra: fibra * qtd };
+  }
+  const f = qtd / 100;
+  return { kcal: alim.kcal * f, carb: alim.carb * f, prot: alim.prot * f, gord: alim.gord * f, fibra: fibra * f };
+}
+
+function descricaoQtd(it){
+  if(it.alim.tipo === 'unidade'){
+    const total = (it.alim.tamanho * it.qtd).toFixed(0);
+    const medida = it.alim.medida || 'g';
+    if(it.qtd === 1) return `1 unidade (${total}${medida})`;
+    return `${it.qtd}× ${it.alim.tamanho}${medida} (${total}${medida})`;
+  }
+  return `${it.qtd}g`;
+}
+
+// ===================== RENDER =====================
+function renderTudo(){
+  try{
+    renderResumo();
+    renderRefeicoes();
+    renderListaAlim();
+    renderMetasForm();
+  }catch(e){
+    console.error('Erro ao renderizar:', e);
+    mostrarErro('Erro ao carregar dados: ' + e.message);
+  }
+}
+
+function renderResumo(){
+  let tk=0,tc=0,tp=0,tg=0,tf=0;
+  diario.forEach(ref => ref.forEach(it => {
+    const m = calcMacros(it.alim, it.qtd);
+    tk+=m.kcal; tc+=m.carb; tp+=m.prot; tg+=m.gord; tf+=m.fibra;
+  }));
+  document.getElementById('resumo').innerHTML = `
+    <div class="r-card"><span class="r-label">Calorias</span><div class="r-value ${statusClass(tk,metas.kcal)}">${tk.toFixed(0)}<span class="r-meta">alvo ${metas.kcal[0]}–${metas.kcal[1]}</span></div></div>
+    <div class="r-card"><span class="r-label">Carboidrato</span><div class="r-value ${statusClass(tc,metas.carb)}">${tc.toFixed(1)}g<span class="r-meta">alvo ${metas.carb[0]}–${metas.carb[1]}</span></div></div>
+    <div class="r-card"><span class="r-label">Proteína</span><div class="r-value ${statusClass(tp,metas.prot)}">${tp.toFixed(1)}g<span class="r-meta">alvo ${metas.prot[0]}–${metas.prot[1]}</span></div></div>
+    <div class="r-card"><span class="r-label">Gordura</span><div class="r-value ${statusClass(tg,metas.gord)}">${tg.toFixed(1)}g<span class="r-meta">alvo ${metas.gord[0]}–${metas.gord[1]}</span></div></div>
+    <div class="r-card" style="grid-column:span 2"><span class="r-label">Fibra</span><div class="r-value ${statusClass(tf,metas.fibra)}">${tf.toFixed(1)}g<span class="r-meta">alvo ${metas.fibra[0]}–${metas.fibra[1]}</span></div></div>`;
+}
+
+function renderRefeicoes(){
+  const cont = document.getElementById('refeicoes');
+  cont.innerHTML = '';
+  NOMES_REF.forEach((nome, rIdx) => {
+    let rk=0,rc=0,rp=0,rg=0,rf=0;
+    const itemsHtml = diario[rIdx].map((it, iIdx) => {
+      const m = calcMacros(it.alim, it.qtd);
+      rk+=m.kcal; rc+=m.carb; rp+=m.prot; rg+=m.gord; rf+=m.fibra;
+      return `<div class="item"><span class="item-name">${it.alim.n} <span class="item-peso">· ${descricaoQtd(it)} · ${m.kcal.toFixed(0)} kcal</span></span><div class="tags"><span class="tag">C ${m.carb.toFixed(1)}g</span><span class="tag">P ${m.prot.toFixed(1)}g</span><span class="tag">G ${m.gord.toFixed(1)}g</span><span class="tag">F ${m.fibra.toFixed(1)}g</span></div><button class="btn-del no-print" onclick="removerItem(${rIdx},${iIdx})">✕</button></div>`;
+    }).join('');
+
+    const opts = alimentos.map((a,i)=>({a,i})).sort((x,y)=>x.a.n.localeCompare(y.a.n,'pt')).map(({a,i})=>`<option value="${i}">${a.n}${a.tipo==='unidade'?` (${a.tamanho}${a.medida||'g'})`:''}</option>`).join('');
+
+    cont.innerHTML += `
+      <div class="ref-card">
+        <div class="ref-head"><h2 class="ref-title">${nome}</h2><div class="macros-row"><span>${rk.toFixed(0)} kcal</span><span>C ${rc.toFixed(1)}g</span><span>P ${rp.toFixed(1)}g</span><span>G ${rg.toFixed(1)}g</span><span>F ${rf.toFixed(1)}g</span></div></div>
+        ${itemsHtml || '<div class="empty">Sem itens</div>'}
+        <div class="add-area no-print">
+          <select id="sel-${rIdx}" onchange="atualizarPlaceholder(${rIdx})"><option value="-1">+ alimento...</option>${opts}</select>
+          <input type="number" id="qtd-${rIdx}" placeholder="peso g" min="0" step="0.1">
+          <button class="btn-add" onclick="adicionarItem(${rIdx})">+</button>
+        </div>
+      </div>`;
+  });
+}
+
+function atualizarPlaceholder(rIdx){
+  const sel = document.getElementById(`sel-${rIdx}`);
+  const input = document.getElementById(`qtd-${rIdx}`);
+  const idx = parseInt(sel.value);
+  if(idx < 0){ input.placeholder = 'peso g'; return; }
+  const alim = alimentos[idx];
+  if(alim.tipo === 'unidade'){
+    input.placeholder = `unid. (${alim.tamanho}${alim.medida||'g'})`;
+    input.value = '1';
+  } else {
+    input.placeholder = 'peso g';
+    input.value = '';
+  }
+}
+
+function renderListaAlim(){
+  const cont = document.getElementById('lista-alim');
+  if(alimentos.length === 0){ cont.innerHTML = '<div class="empty">Nenhum alimento cadastrado</div>'; return; }
+  const porPeso = alimentos.map((a,i)=>({a,i})).filter(x=>x.a.tipo!=='unidade').sort((x,y)=>x.a.n.localeCompare(y.a.n,'pt'));
+  const porUnidade = alimentos.map((a,i)=>({a,i})).filter(x=>x.a.tipo==='unidade').sort((x,y)=>x.a.n.localeCompare(y.a.n,'pt'));
+  let html = '';
+  if(porPeso.length){
+    html += '<div class="lista-categoria">Por 100g</div>';
+    html += porPeso.map(({a,i})=>`<div class="alim-row"><div class="alim-info"><strong>${a.n}</strong><small>${a.kcal} kcal · C ${a.carb}g · P ${a.prot}g · G ${a.gord}g · F ${a.fibra||0}g / 100g</small></div><button class="edit-btn" onclick="editarAlimento(${i})">editar</button><button class="del-btn" onclick="excluirAlimento(${i})">excluir</button></div>`).join('');
+  }
+  if(porUnidade.length){
+    html += '<div class="lista-categoria">Por Unidade</div>';
+    html += porUnidade.map(({a,i})=>`<div class="alim-row"><div class="alim-info"><strong>${a.n} <span class="badge">${a.tamanho}${a.medida||'g'}</span></strong><small>${a.kcal} kcal · C ${a.carb}g · P ${a.prot}g · G ${a.gord}g · F ${a.fibra||0}g por unidade</small></div><button class="edit-btn" onclick="editarAlimento(${i})">editar</button><button class="del-btn" onclick="excluirAlimento(${i})">excluir</button></div>`).join('');
+  }
+  cont.innerHTML = html;
+}
+
+function renderMetasForm(){
+  document.getElementById('meta-kcal-min').value = metas.kcal[0];
+  document.getElementById('meta-kcal-max').value = metas.kcal[1];
+  document.getElementById('meta-carb-min').value = metas.carb[0];
+  document.getElementById('meta-carb-max').value = metas.carb[1];
+  document.getElementById('meta-prot-min').value = metas.prot[0];
+  document.getElementById('meta-prot-max').value = metas.prot[1];
+  document.getElementById('meta-gord-min').value = metas.gord[0];
+  document.getElementById('meta-gord-max').value = metas.gord[1];
+  document.getElementById('meta-fibra-min').value = metas.fibra[0];
+  document.getElementById('meta-fibra-max').value = metas.fibra[1];
+}
+
+function toggleTipo(tipo){
+  document.getElementById('cad-tipo').value = tipo;
+  document.querySelectorAll('.tipo-btn').forEach(b => b.classList.toggle('active', b.dataset.tipo === tipo));
+  const unidadeBlock = document.getElementById('unidade-fields-block');
+  const labelBase = document.getElementById('label-base');
+  if(tipo === 'unidade'){
+    unidadeBlock.classList.add('active');
+    labelBase.textContent = 'Valores por UNIDADE (toda a porção)';
+  } else {
+    unidadeBlock.classList.remove('active');
+    labelBase.textContent = 'Valores por 100g';
+  }
+}
+
+function adicionarItem(rIdx){
+  const sel = document.getElementById(`sel-${rIdx}`);
+  const qtd = parseFloat(document.getElementById(`qtd-${rIdx}`).value);
+  const idx = parseInt(sel.value);
+  if(idx < 0 || isNaN(qtd) || qtd <= 0){
+    const alim = idx >= 0 ? alimentos[idx] : null;
+    if(alim && alim.tipo === 'unidade') alert('Selecione um alimento e informe quantas unidades');
+    else alert('Selecione um alimento e informe o peso em gramas');
+    return;
+  }
+  diario[rIdx].push({ alim: alimentos[idx], qtd: qtd });
+  salvarDiarioStorage();
+  renderResumo(); renderRefeicoes();
+}
+
+function removerItem(rIdx, iIdx){
+  diario[rIdx].splice(iIdx,1);
+  salvarDiarioStorage();
+  renderResumo(); renderRefeicoes();
+}
+
+function salvarAlimento(){
+  const nome = document.getElementById('cad-nome').value.trim();
+  const kcal = parseFloat(document.getElementById('cad-kcal').value);
+  const carb = parseFloat(document.getElementById('cad-carb').value);
+  const prot = parseFloat(document.getElementById('cad-prot').value);
+  const gord = parseFloat(document.getElementById('cad-gord').value);
+  const fibraVal = parseFloat(document.getElementById('cad-fibra').value);
+  const fibra = isNaN(fibraVal) ? 0 : fibraVal;
+  const tipo = document.getElementById('cad-tipo').value;
+  if(!nome || isNaN(kcal) || isNaN(carb) || isNaN(prot) || isNaN(gord)){ alert('Preencha calorias, carboidrato, proteína e gordura'); return; }
+  const novoAlim = { n:nome, kcal, carb, prot, gord, fibra, tipo };
+  if(tipo === 'unidade'){
+    const tamanho = parseFloat(document.getElementById('cad-tamanho').value);
+    const medida = document.getElementById('cad-medida').value;
+    if(isNaN(tamanho) || tamanho <= 0){ alert('Informe o tamanho da unidade'); return; }
+    novoAlim.tamanho = tamanho;
+    novoAlim.medida = medida;
+  }
+  const editing = document.getElementById('cad-editing').value;
+  if(editing !== '') alimentos[parseInt(editing)] = novoAlim;
+  else alimentos.push(novoAlim);
+  salvarAlimentosStorage();
+  limparFormCad();
+  renderTudo();
+}
+
+function editarAlimento(i){
+  const a = alimentos[i];
+  document.getElementById('cad-nome').value = a.n;
+  document.getElementById('cad-kcal').value = a.kcal;
+  document.getElementById('cad-carb').value = a.carb;
+  document.getElementById('cad-prot').value = a.prot;
+  document.getElementById('cad-gord').value = a.gord;
+  document.getElementById('cad-fibra').value = a.fibra || 0;
+  document.getElementById('cad-editing').value = i;
+  toggleTipo(a.tipo || 'peso');
+  if(a.tipo === 'unidade'){
+    document.getElementById('cad-tamanho').value = a.tamanho;
+    document.getElementById('cad-medida').value = a.medida || 'g';
+  }
+  document.getElementById('btn-cancelar').style.display = 'block';
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+function cancelarEdicao(){ limparFormCad(); }
+
+function excluirAlimento(i){
+  if(!confirm(`Excluir "${alimentos[i].n}"?`)) return;
+  alimentos.splice(i,1);
+  salvarAlimentosStorage();
+  renderTudo();
+}
+
+function limparFormCad(){
+  ['cad-nome','cad-kcal','cad-carb','cad-prot','cad-gord','cad-fibra','cad-tamanho'].forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
+  document.getElementById('cad-editing').value = '';
+  document.getElementById('btn-cancelar').style.display = 'none';
+  toggleTipo('peso');
+}
+
+function salvarMetas(){
+  metas = {
+    kcal:[parseFloat(document.getElementById('meta-kcal-min').value), parseFloat(document.getElementById('meta-kcal-max').value)],
+    carb:[parseFloat(document.getElementById('meta-carb-min').value), parseFloat(document.getElementById('meta-carb-max').value)],
+    prot:[parseFloat(document.getElementById('meta-prot-min').value), parseFloat(document.getElementById('meta-prot-max').value)],
+    gord:[parseFloat(document.getElementById('meta-gord-min').value), parseFloat(document.getElementById('meta-gord-max').value)],
+    fibra:[parseFloat(document.getElementById('meta-fibra-min').value), parseFloat(document.getElementById('meta-fibra-max').value)]
+  };
+  salvarMetasStorage();
+  renderResumo();
+  alert('Metas atualizadas');
+}
+
+function limparDia(){
+  if(!confirm('Limpar todos os itens do dia?')) return;
+  diario = [[],[],[],[]];
+  salvarDiarioStorage();
+  renderResumo(); renderRefeicoes();
+}
+
+document.querySelectorAll('.tab').forEach(t => {
+  t.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+    t.classList.add('active');
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+    document.getElementById('tab-' + t.dataset.tab).classList.remove('hidden');
+  });
+});
+
+// Init: aguarda DOM
+if(document.readyState === 'loading'){
+  document.addEventListener('DOMContentLoaded', carregarTudo);
+} else {
+  carregarTudo();
+}
+</script>
+</body>
+</html>
   
