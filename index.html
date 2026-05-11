@@ -1,214 +1,307 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Meu Dieta Pro - Planner Oficial</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        /* Cores das Metas */
-        .meta-gray { color: #9ca3af; } 
-        .status-red { color: #ef4444; } 
-        .status-yellow { color: #f59e0b; } 
-        .status-green { color: #10b981; } 
-        .status-orange { color: #f97316; } 
-        .status-cyan { color: #06b6d4; } 
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calculadora de Dieta Adaptável</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#f4f1ea;
+    --ink:#1a1a1a;
+    --muted:#7a7468;
+    --line:#d9d3c4;
+    --card:#fffdf7;
+    --accent:#c2410c;
+    --ok:#16a34a;
+    --low:#ea580c;
+    --high:#dc2626;
+  }
+  *{box-sizing:border-box}
+  body{font-family:'Fraunces',serif;background:var(--bg);color:var(--ink);margin:0;padding:14px;max-width:720px;margin-inline:auto}
+  h1{font-size:1.4rem;font-weight:800;letter-spacing:-0.02em;margin:0 0 4px}
+  .sub{font-size:.78rem;color:var(--muted);font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:.08em;margin-bottom:18px}
 
-        /* Regras de Impressão (PDF Perfeito) */
-        @media print {
-            .no-print { display: none !important; }
-            header { position: static !important; box-shadow: none !important; border: 1px solid #eee !important; }
-            body { background: white !important; padding: 0 !important; }
-            .meal-card { break-inside: avoid; border: 1px solid #eee !important; margin-bottom: 20px !important; }
-            #app-content { max-width: 100% !important; width: 100% !important; padding: 0 !important; }
-        }
+  .resumo{display:grid;grid-template-columns:1fr 1fr;gap:8px;position:sticky;top:0;background:var(--bg);padding:10px 0;z-index:50;border-bottom:1px solid var(--line)}
+  .r-card{background:var(--card);padding:10px 12px;border-radius:10px;border:1px solid var(--line)}
+  .r-label{font-family:'JetBrains Mono',monospace;font-size:.62rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted)}
+  .r-value{font-size:1.15rem;font-weight:800;margin-top:2px;font-feature-settings:"tnum"}
+  .r-meta{font-family:'JetBrains Mono',monospace;font-size:.65rem;color:var(--muted);font-weight:400;display:block;margin-top:1px}
+  .ok{color:var(--ok)}.low{color:var(--low)}.high{color:var(--high)}
 
-        .meal-card { break-inside: avoid; }
-    </style>
+  .tabs{display:flex;gap:4px;margin:14px 0 10px;background:var(--card);padding:4px;border-radius:10px;border:1px solid var(--line)}
+  .tab{flex:1;padding:8px;border:none;background:transparent;font-family:'JetBrains Mono',monospace;font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);cursor:pointer;border-radius:7px;font-weight:600}
+  .tab.active{background:var(--ink);color:var(--bg)}
+
+  .ref-card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px}
+  .ref-head{border-bottom:1px dashed var(--line);padding-bottom:8px;margin-bottom:10px}
+  .ref-title{font-size:1.1rem;font-weight:600;margin:0}
+  .macros-row{display:flex;flex-wrap:wrap;gap:10px;margin-top:6px;font-family:'JetBrains Mono',monospace;font-size:.72rem;font-weight:600}
+
+  .item{background:#fff;border:1px solid var(--line);border-radius:8px;padding:9px 28px 9px 10px;margin-bottom:6px;position:relative}
+  .item-name{font-weight:600;font-size:.88rem;display:block;margin-bottom:3px}
+  .item-peso{font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--muted);font-weight:400}
+  .tags{display:flex;gap:4px;flex-wrap:wrap;margin-top:3px}
+  .tag{font-family:'JetBrains Mono',monospace;font-size:.62rem;padding:2px 5px;border-radius:3px;background:#f4f1ea;color:var(--muted);font-weight:600}
+  .btn-del{position:absolute;top:6px;right:6px;background:none;border:none;color:#ccc;font-size:.95rem;cursor:pointer;padding:4px}
+  .btn-del:hover{color:var(--high)}
+
+  .add-area{display:grid;grid-template-columns:1fr 90px 40px;gap:5px;margin-top:10px}
+  select,input{padding:9px 8px;border-radius:7px;border:1px solid var(--line);font-size:.85rem;background:#fff;font-family:'Fraunces',serif;color:var(--ink)}
+  input[type=number]{font-family:'JetBrains Mono',monospace}
+  .btn-add{background:var(--ink);color:var(--bg);border:none;border-radius:7px;font-weight:700;cursor:pointer;font-size:1rem}
+  .btn-add:hover{background:var(--accent)}
+
+  .cadastro{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px}
+  .cad-form{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}
+  .cad-form .full{grid-column:span 2}
+  .cad-form label{font-family:'JetBrains Mono',monospace;font-size:.62rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);display:block;margin-bottom:3px}
+  .cad-form input,.cad-form select{width:100%}
+  .btn-primary{background:var(--accent);color:#fff;border:none;padding:10px;border-radius:8px;font-weight:700;cursor:pointer;width:100%;font-family:'JetBrains Mono',monospace;text-transform:uppercase;font-size:.78rem;letter-spacing:.08em}
+  .btn-primary:hover{background:var(--ink)}
+
+  .tipo-toggle{display:flex;gap:6px;grid-column:span 2;margin-bottom:4px}
+  .tipo-btn{flex:1;padding:8px;border:1px solid var(--line);background:#fff;border-radius:7px;font-family:'JetBrains Mono',monospace;font-size:.68rem;text-transform:uppercase;letter-spacing:.06em;cursor:pointer;font-weight:600;color:var(--muted)}
+  .tipo-btn.active{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+
+  .unidade-fields{display:none;grid-column:span 2;grid-template-columns:1fr 1fr;gap:8px}
+  .unidade-fields.active{display:grid}
+
+  .lista-alim{margin-top:14px;max-height:340px;overflow-y:auto}
+  .lista-categoria{font-family:'JetBrains Mono',monospace;font-size:.62rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);padding:8px 0 4px;border-bottom:1px solid var(--line);margin-top:6px}
+  .alim-row{display:flex;justify-content:space-between;align-items:center;padding:8px 4px;border-bottom:1px dashed var(--line);font-size:.82rem;gap:6px}
+  .alim-row:last-child{border-bottom:none}
+  .alim-info{flex:1;min-width:0}
+  .alim-info strong{display:block;font-weight:600;font-size:.82rem}
+  .alim-info small{font-family:'JetBrains Mono',monospace;font-size:.64rem;color:var(--muted)}
+  .alim-info .badge{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:.58rem;padding:1px 4px;border-radius:3px;background:#e8e2d0;color:var(--muted);font-weight:600;margin-left:4px;text-transform:uppercase;letter-spacing:.05em}
+  .alim-row button{background:none;border:1px solid var(--line);padding:3px 6px;border-radius:5px;font-size:.65rem;cursor:pointer;font-family:'JetBrains Mono',monospace;flex-shrink:0}
+  .alim-row .edit-btn:hover{background:var(--ink);color:var(--bg)}
+  .alim-row .del-btn:hover{background:var(--high);color:#fff;border-color:var(--high)}
+
+  .metas-form{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:8px}
+  .metas-form .label-full{grid-column:span 3;font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--muted);text-transform:uppercase;margin-top:6px}
+  .metas-form input{width:100%;padding:7px;font-size:.8rem}
+  .metas-form .sep{align-self:center;text-align:center;color:var(--muted)}
+
+  .footer-actions{display:flex;gap:6px;margin-top:14px}
+  .footer-actions button{flex:1;padding:10px;border-radius:8px;border:1px solid var(--line);background:#fff;font-family:'JetBrains Mono',monospace;font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;cursor:pointer;font-weight:600}
+  .footer-actions button:hover{background:var(--ink);color:var(--bg)}
+
+  .hidden{display:none}
+  .empty{font-size:.8rem;color:var(--muted);font-style:italic;text-align:center;padding:14px 0}
+
+  @media print{
+    .no-print{display:none!important}
+    .resumo{position:static}
+    .ref-card{break-inside:avoid}
+    body{background:#fff}
+  }
+</style>
 </head>
-<body class="bg-gray-50 min-h-screen font-sans text-gray-900 text-[14px]">
+<body>
 
-    <div id="app-content" class="max-w-4xl mx-auto p-4 pb-20">
-        <header class="bg-white rounded-xl shadow-md p-6 mb-6 sticky top-0 z-10">
-            <h1 class="text-2xl font-bold mb-4 border-b pb-2 text-center">Planejador de Dieta</h1>
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4" id="dashboard-total"></div>
-            
-            <div class="mt-4 p-3 bg-gray-100 rounded-lg flex flex-wrap justify-between items-center gap-2">
-                <div class="no-print">
-                    <label class="text-sm font-semibold">Meta de Fibra (Adaptável):</label>
-                    <input type="number" id="target-fiber" class="bg-transparent border-b border-gray-400 focus:outline-none w-16 px-2 text-center" value="25" onchange="updateUI()">
-                </div>
-                <div class="text-right">
-                    <span class="text-sm">Fibras Totais: <span id="current-fiber" class="font-bold text-black text-lg">0g</span></span>
-                </div>
-            </div>
-        </header>
+<h1>Calculadora de Dieta</h1>
+<div class="sub">TACO + Rótulos · Peso ou Unidade</div>
 
-        <div class="space-y-6" id="refeicoes-container"></div>
+<div class="resumo" id="resumo"></div>
 
-        <div class="mt-8 flex justify-center no-print">
-            <button onclick="window.print()" class="bg-black text-white px-8 py-4 rounded-xl font-bold hover:bg-gray-800 transition-all w-full md:w-auto shadow-lg">
-                SALVAR DIETA EM PDF
-            </button>
-        </div>
+<div class="tabs no-print">
+  <button class="tab active" data-tab="diario">Diário</button>
+  <button class="tab" data-tab="alimentos">Alimentos</button>
+  <button class="tab" data-tab="metas">Metas</button>
+</div>
+
+<div id="tab-diario" class="tab-content">
+  <div id="refeicoes"></div>
+  <div class="footer-actions no-print">
+    <button onclick="window.print()">Salvar PDF</button>
+    <button onclick="limparDia()">Limpar Dia</button>
+  </div>
+</div>
+
+<div id="tab-alimentos" class="tab-content hidden">
+  <div class="cadastro">
+    <div style="font-family:'JetBrains Mono',monospace;font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)">Cadastrar Alimento</div>
+    <div class="cad-form">
+      <div class="tipo-toggle">
+        <button type="button" class="tipo-btn active" data-tipo="peso" onclick="toggleTipo('peso')">Por 100g</button>
+        <button type="button" class="tipo-btn" data-tipo="unidade" onclick="toggleTipo('unidade')">Por Unidade</button>
+      </div>
+      <div class="full"><label>Nome</label><input id="cad-nome" type="text" placeholder="ex: Arroz cozido"></div>
+      <div class="unidade-fields" id="unidade-fields-block">
+        <div><label>Tamanho da unidade</label><input id="cad-tamanho" type="number" step="0.1" placeholder="ex: 170"></div>
+        <div><label>Unidade de medida</label><select id="cad-medida"><option value="g">gramas (g)</option><option value="ml">mililitros (ml)</option></select></div>
+      </div>
+      <div id="label-base" class="full" style="font-family:'JetBrains Mono',monospace;font-size:.62rem;text-transform:uppercase;letter-spacing:.08em;color:var(--accent);margin-top:4px">Valores por 100g</div>
+      <div><label>Calorias (kcal)</label><input id="cad-kcal" type="number" step="0.1" placeholder="0"></div>
+      <div><label>Carboidrato (g)</label><input id="cad-carb" type="number" step="0.1" placeholder="0"></div>
+      <div><label>Proteína (g)</label><input id="cad-prot" type="number" step="0.1" placeholder="0"></div>
+      <div><label>Gordura (g)</label><input id="cad-gord" type="number" step="0.1" placeholder="0"></div>
     </div>
+    <button class="btn-primary" onclick="salvarAlimento()">Salvar Alimento</button>
+    <button class="btn-primary" onclick="cancelarEdicao()" style="background:#999;margin-top:6px;display:none" id="btn-cancelar">Cancelar Edição</button>
+    <input type="hidden" id="cad-editing" value="">
+    <input type="hidden" id="cad-tipo" value="peso">
+    <div class="lista-alim" id="lista-alim"></div>
+  </div>
+</div>
 
-    <script>
-        const FOODS = [
-            { name: "🥚 Ovo cozido grande (58g)", kcal: 76, carb: 0.3, prot: 6.9, fat: 4.9, fib: 0 },
-            { name: "🥚 Ovo cozido sem a gema", kcal: 18, carb: 0, prot: 4.2, fat: 0, fib: 0 },
-            { name: "🥚🥚🧈 Dois ovos fritos na margarina", kcal: 121, carb: 0.3, prot: 13.8, fat: 9.9, fib: 0 },
-            { name: "🧈 Margarina (10g - 1 colher)", kcal: 45, carb: 0, prot: 0, fat: 5, fib: 0 },
-            { name: "🛢️ Óleo de soja (10ml - 1 colher)", kcal: 83, carb: 0, prot: 0, fat: 9.2, fib: 0 },
-            { name: "🍚 Arroz cozido (100g)", kcal: 142, carb: 28.1, prot: 2.5, fat: 1.7, fib: 1.6 },
-            { name: "🍚 Arroz cozido (150g)", kcal: 213, carb: 42.2, prot: 3.8, fat: 2.6, fib: 2.4 },
-            { name: "🍲 Feijão cozido (100g)", kcal: 76, carb: 13.6, prot: 4.8, fat: 0.5, fib: 8.5 },
-            { name: "🍲 Feijão c/ caldo carne (100g)", kcal: 85, carb: 13.6, prot: 4.8, fat: 1.5, fib: 8.5 },
-            { name: "🍲 Feijão cozido (150g)", kcal: 114, carb: 20.4, prot: 7.2, fat: 0.8, fib: 12.8 },
-            { name: "🍲 Feijão c/ caldo carne (150g)", kcal: 128, carb: 20.4, prot: 7.2, fat: 2.3, fib: 12.8 },
-            { name: "🫓 Pão sovado (40g)", kcal: 124, carb: 24.6, prot: 3.4, fat: 1.1, fib: 1 },
-            { name: "🍞 Pão francês inteiro (38g)", kcal: 114, carb: 22.3, prot: 3, fat: 1.2, fib: 0.9 },
-            { name: "🍞 Pão francês sem miolo (22g)", kcal: 66, carb: 12.9, prot: 1.8, fat: 0.7, fib: 0.5 },
-            { name: "🌾 Aveia (40g)", kcal: 148, carb: 23, prot: 5.6, fat: 3.1, fib: 2.7 },
-            { name: "🌰 Granola São Braz Light (40g)", kcal: 147, carb: 29, prot: 3.7, fat: 2, fib: 3 },
-            { name: "🌰 Granola Tradicional (40g)", kcal: 150, carb: 32, prot: 2.4, fat: 2.1, fib: 3.4 },
-            { name: "🌰 Granola Bem Estar (40g)", kcal: 140, carb: 25, prot: 4.2, fat: 2.4, fib: 3 },
-            { name: "🥣 Farinha láctea (30g)", kcal: 122, carb: 22, prot: 3.8, fat: 1.9, fib: 0 },
-            { name: "🥣 Farinha láctea (15g)", kcal: 61, carb: 11, prot: 1.9, fat: 0.95, fib: 0 },
-            { name: "🍙 Tapioca Lopes (68g)", kcal: 155, carb: 38.8, prot: 0, fat: 0, fib: 0.4 },
-            { name: "🍙 Tapioca Lopes (115g)", kcal: 262, carb: 65.6, prot: 0, fat: 0, fib: 0.7 },
-            { name: "🍙 Tapioca Parceria (68g)", kcal: 177, carb: 44.2, prot: 0, fat: 0, fib: 0 },
-            { name: "🍙 Tapioca Parceria (115g)", kcal: 299, carb: 74.8, prot: 0, fat: 0, fib: 0 },
-            { name: "🍙 Tapioca Kumê (68g)", kcal: 177, carb: 44.2, prot: 0, fat: 0, fib: 0 },
-            { name: "🍙 Tapioca Kumê (115g)", kcal: 299, carb: 74.8, prot: 0, fat: 0, fib: 0 },
-            { name: "🌽 Cuscuz Vitamilho CRU (50g)", kcal: 176, carb: 40, prot: 3.6, fat: 0.8, fib: 2.8 },
-            { name: "🌽 Cuscuz Vitamilho CRU (100g)", kcal: 351, carb: 79, prot: 7.2, fat: 1.5, fib: 5.5 },
-            { name: "🌽 Cuscuz Dona Clara CRU (50g)", kcal: 176, carb: 40, prot: 3.2, fat: 0.4, fib: 0.6 },
-            { name: "🌽 Cuscuz Dona Clara CRU (100g)", kcal: 352, carb: 80, prot: 6.3, fat: 0.7, fib: 1.1 },
-            { name: "🌽 Cuscuz Dona Clara COZIDO (50g)", kcal: 57, carb: 12.6, prot: 1.1, fat: 0.05, fib: 0.4 },
-            { name: "🌽 Cuscuz Dona Clara COZIDO (100g)", kcal: 113, carb: 25.2, prot: 2.2, fat: 0.1, fib: 0.8 },
-            { name: "🌽 Cuscuz Vitamilho COZIDO (50g)", kcal: 57, carb: 12.6, prot: 1.1, fat: 0.05, fib: 1.9 },
-            { name: "🌽 Cuscuz Vitamilho COZIDO (100g)", kcal: 113, carb: 25.2, prot: 2.2, fat: 0.1, fib: 3.9 },
-            { name: "🍌 Banana (70g)", kcal: 69, carb: 18.2, prot: 0.9, fat: 0.07, fib: 1 },
-            { name: "🍌 Banana (100g)", kcal: 98, carb: 26, prot: 1.3, fat: 0.1, fib: 1.5 },
-            { name: "🍌 Banana (150g)", kcal: 147, carb: 39, prot: 2, fat: 0.15, fib: 2.2 },
-            { name: "🥛 Leite pó integral (13g)", kcal: 65, carb: 5, prot: 3.2, fat: 3.5, fib: 0 },
-            { name: "🥛 Leite pó integral (26g)", kcal: 129, carb: 10, prot: 6.5, fat: 7, fib: 0 },
-            { name: "🥛 Leite pó desnatado (13g)", kcal: 44, carb: 6.5, prot: 4.5, fat: 0, fib: 0 },
-            { name: "🥛 Leite pó desnatado (26g)", kcal: 88, carb: 13, prot: 9, fat: 0, fib: 0 },
-            { name: "🍖 Bisteca frita (55g)", kcal: 107, carb: 0, prot: 17.8, fat: 3.9, fib: 0 },
-            { name: "🍖 Bisteca frita (64g)", kcal: 125, carb: 0, prot: 20.7, fat: 4.5, fib: 0 },
-            { name: "🍗 Peito frango frito (60g)", kcal: 103, carb: 0, prot: 18.9, fat: 2.5, fib: 0 },
-            { name: "🍗 Peito frango frito (70g)", kcal: 120, carb: 0, prot: 22, fat: 2.9, fib: 0 },
-            { name: "🍗 Frango cozido refogado (60g)", kcal: 124, carb: 0, prot: 16.2, fat: 6.3, fib: 0 },
-            { name: "🍗 Frango cozido refogado (70g)", kcal: 144, carb: 0, prot: 18.9, fat: 7.4, fib: 0 },
-            { name: "🧀 Queijo coalho irmã (30g)", kcal: 96, carb: 1.1, prot: 6.4, fat: 7.4, fib: 0 },
-            { name: "🧀 Queijo coalho Medeiros (21g)", kcal: 67, carb: 0.8, prot: 5.2, fat: 6.09, fib: 0 }
-        ];
+<div id="tab-metas" class="tab-content hidden">
+  <div class="cadastro">
+    <div style="font-family:'JetBrains Mono',monospace;font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)">Metas Diárias (faixas mín–máx)</div>
+    <div class="metas-form">
+      <div class="label-full">Calorias</div>
+      <input id="meta-kcal-min" type="number" placeholder="mín"><span class="sep">–</span><input id="meta-kcal-max" type="number" placeholder="máx">
+      <div class="label-full">Carboidrato (g)</div>
+      <input id="meta-carb-min" type="number" placeholder="mín"><span class="sep">–</span><input id="meta-carb-max" type="number" placeholder="máx">
+      <div class="label-full">Proteína (g)</div>
+      <input id="meta-prot-min" type="number" placeholder="mín"><span class="sep">–</span><input id="meta-prot-max" type="number" placeholder="máx">
+      <div class="label-full">Gordura (g)</div>
+      <input id="meta-gord-min" type="number" placeholder="mín"><span class="sep">–</span><input id="meta-gord-max" type="number" placeholder="máx">
+    </div>
+    <button class="btn-primary" onclick="salvarMetas()" style="margin-top:10px">Salvar Metas</button>
+  </div>
+</div>
 
-        let meals = [
-            { id: 0, name: "🍳 Café da Manhã", target: { prot: 28, carb: 40, fat: 14, kcal: 398 }, selectedFoods: [] },
-            { id: 1, name: "🍛 Almoço", target: { prot: 32, carb: 55, fat: 18, kcal: 506 }, selectedFoods: [] },
-            { id: 2, name: "☕ Lanche da Tarde", target: { prot: 30, carb: 50, fat: 7, kcal: 387 }, selectedFoods: [] },
-            { id: 3, name: "🌙 Jantar", target: { prot: 28, carb: 30, fat: 20, kcal: 409 }, selectedFoods: [] }
-        ];
+<script>
+let alimentos = [];
+let diario = [[],[],[],[]];
+let metas = { kcal:[1700,1890], carb:[210,230], prot:[100,135], gord:[59,64] };
+const NOMES_REF = ["Café da Manhã","Almoço","Café da Tarde","Jantar"];
 
-        const LIMITS = {
-            prot: { min: 95, ideal: 118, max: 130 },
-            fat: { min: 47, ideal: 59, max: 70 },
-            carb: { min: 150, ideal: 175, max: 200 },
-            kcal: { min: 1600, ideal: 1700, max: 1800 }
-        };
+const ALIMENTOS_PADRAO = [
+  // POR 100g
+  {n:"Arroz cozido", kcal:137, carb:28.1, prot:2.5, gord:1.2, tipo:"peso"},
+  {n:"Feijão cozido", kcal:76, carb:13.6, prot:4.8, gord:0.5, tipo:"peso"},
+  {n:"Feijão cozido com caldo de carne", kcal:85, carb:13.6, prot:4.8, gord:1.5, tipo:"peso"},
+  {n:"Macarrão ninho cozido", kcal:59, carb:12.6, prot:1.6, gord:0.2, tipo:"peso"},
+  {n:"Macarrão parafuso cozido", kcal:53, carb:11.3, prot:1.4, gord:0.2, tipo:"peso"},
+  {n:"Cuscuz Dona Clara cru", kcal:352, carb:80, prot:6.3, gord:0.7, tipo:"peso"},
+  {n:"Cuscuz Dona Clara cozido", kcal:113, carb:25.2, prot:2.2, gord:0.1, tipo:"peso"},
+  {n:"Cuscuz Vitamilho cru", kcal:351, carb:79, prot:7.2, gord:1.5, tipo:"peso"},
+  {n:"Cuscuz Vitamilho cozido", kcal:113, carb:25.2, prot:2.2, gord:0.1, tipo:"peso"},
+  {n:"Tapioca Lopes", kcal:228, carb:57.1, prot:0, gord:0, tipo:"peso"},
+  {n:"Tapioca Kumê", kcal:260, carb:65, prot:0, gord:0, tipo:"peso"},
+  {n:"Tapioca Parceria", kcal:260, carb:65, prot:0, gord:0, tipo:"peso"},
+  {n:"Pão sovado", kcal:311, carb:61.5, prot:8.4, gord:2.8, tipo:"peso"},
+  {n:"Pão francês inteiro", kcal:300, carb:58.6, prot:8, gord:3.1, tipo:"peso"},
+  {n:"Aveia em flocos", kcal:376, carb:58, prot:14, gord:7.8, tipo:"peso"},
+  {n:"Granola Bem Estar", kcal:350, carb:62.5, prot:10.5, gord:6, tipo:"peso"},
+  {n:"Farinha Láctea Nestlé", kcal:407, carb:73.3, prot:12.7, gord:6.3, tipo:"peso"},
+  {n:"Banana", kcal:98, carb:26, prot:1.3, gord:0.1, tipo:"peso"},
+  {n:"Laranja", kcal:37, carb:8.9, prot:1, gord:0.1, tipo:"peso"},
+  {n:"Tangerina", kcal:38, carb:9.6, prot:0.8, gord:0.1, tipo:"peso"},
+  {n:"Uva verde", kcal:53, carb:13.6, prot:0.7, gord:0.9, tipo:"peso"},
+  {n:"Uva roxa", kcal:49, carb:12.7, prot:0.6, gord:0.9, tipo:"peso"},
+  {n:"Abacate", kcal:96, carb:6, prot:1.2, gord:8.4, tipo:"peso"},
+  {n:"Milho cozido", kcal:138, carb:28.6, prot:6.6, gord:0.6, tipo:"peso"},
+  {n:"Manga", kcal:72, carb:19.4, prot:0.4, gord:0.2, tipo:"peso"},
+  {n:"Melão", kcal:29, carb:7.5, prot:0.7, gord:0, tipo:"peso"},
+  {n:"Melancia", kcal:33, carb:8.1, prot:0.9, gord:0, tipo:"peso"},
+  {n:"Limão", kcal:32, carb:11.1, prot:0.9, gord:0.1, tipo:"peso"},
+  {n:"Acerola", kcal:33, carb:8, prot:0.9, gord:0.2, tipo:"peso"},
+  {n:"Ovo cozido", kcal:146, carb:0.6, prot:13.3, gord:9.5, tipo:"peso"},
+  {n:"Peito de frango cru", kcal:119, carb:0, prot:21.5, gord:3, tipo:"peso"},
+  {n:"Peito de frango na Airfryer", kcal:159, carb:0, prot:32, gord:2.5, tipo:"peso"},
+  {n:"Frango cozido", kcal:153, carb:0, prot:29.5, gord:4.6, tipo:"peso"},
+  {n:"Frango frito no óleo", kcal:192, carb:0, prot:29.5, gord:7.3, tipo:"peso"},
+  {n:"Bisteca crua", kcal:157, carb:0, prot:24, gord:6, tipo:"peso"},
+  {n:"Bisteca na Airfryer", kcal:194, carb:0, prot:35.9, gord:4.5, tipo:"peso"},
+  {n:"Bisteca frita no óleo", kcal:203, carb:0, prot:30, gord:8.7, tipo:"peso"},
+  {n:"Contrafilé cozido", kcal:187, carb:0, prot:35.8, gord:9.8, tipo:"peso"},
+  {n:"Leite líquido integral Maranguape", kcal:58, carb:4.6, prot:3.1, gord:3, tipo:"peso"},
+  {n:"Leite em pó integral", kcal:500, carb:38.5, prot:24.6, gord:26.9, tipo:"peso"},
+  {n:"Leite em pó desnatado", kcal:338, carb:50, prot:34.6, gord:0, tipo:"peso"},
+  {n:"Queijo coalho", kcal:264, carb:3.2, prot:17.4, gord:20.2, tipo:"peso"},
+  {n:"Bolacha mini quadradinha", kcal:425, carb:71, prot:11, gord:10, tipo:"peso"},
+  {n:"Bolacha petit", kcal:423, carb:70, prot:8.7, gord:12, tipo:"peso"},
 
-        function getColorClass(val, lim) {
-            if (val < lim.min) return 'status-red';
-            if (val === lim.min) return 'status-yellow';
-            if (val <= lim.ideal) return 'status-green';
-            if (val <= lim.max) return 'status-orange';
-            return 'status-cyan';
-        }
+  // POR UNIDADE
+  {n:"Iogurte com whey morango", kcal:176, carb:18, prot:12, gord:6, tipo:"unidade", tamanho:170, medida:"g"},
+  {n:"Iogurte com whey coco", kcal:139, carb:8, prot:12, gord:6.6, tipo:"unidade", tamanho:170, medida:"g"},
+  {n:"Sardinha (embalagem)", kcal:206, carb:1.4, prot:23, gord:12, tipo:"unidade", tamanho:75, medida:"g"},
+  {n:"Margarina (colher de sopa)", kcal:45, carb:0, prot:0, gord:5, tipo:"unidade", tamanho:10, medida:"g"},
+  {n:"Óleo de soja (colher de sopa)", kcal:83, carb:0, prot:0, gord:9.2, tipo:"unidade", tamanho:10, medida:"ml"}
+];
 
-        function updateUI() {
-            let tot = { prot: 0, carb: 0, fat: 0, kcal: 0, fib: 0 };
-            meals.forEach(m => m.selectedFoods.forEach(f => {
-                tot.prot += f.prot; tot.carb += f.carb; tot.fat += f.fat; tot.kcal += f.kcal; tot.fib += (f.fib || 0);
-            }));
+function carregarTudo(){
+  let precisaCarregarPadrao = false;
+  try{
+    const a = localStorage.getItem('alimentos_v2');
+    if(a) alimentos = JSON.parse(a);
+    else precisaCarregarPadrao = true;
+  }catch(e){ precisaCarregarPadrao = true; }
+  if(precisaCarregarPadrao){
+    alimentos = JSON.parse(JSON.stringify(ALIMENTOS_PADRAO));
+    salvarAlimentosStorage();
+  } else {
+    // Migração: adiciona alimentos novos do padrão que ainda não estão na lista do usuário
+    // (não sobrescreve, não duplica - só acrescenta os que faltam pelo nome)
+    const nomesExistentes = new Set(alimentos.map(a => a.n.toLowerCase().trim()));
+    const novos = ALIMENTOS_PADRAO.filter(a => !nomesExistentes.has(a.n.toLowerCase().trim()));
+    if(novos.length > 0){
+      alimentos = alimentos.concat(novos);
+      salvarAlimentosStorage();
+    }
+  }
+  try{ const m = localStorage.getItem('metas'); if(m) metas = JSON.parse(m); }catch(e){}
+  try{ const d = localStorage.getItem('diario'); if(d) diario = JSON.parse(d); }catch(e){}
+  renderTudo();
+}
 
-            const dash = document.getElementById('dashboard-total');
-            dash.innerHTML = ['prot', 'fat', 'carb', 'kcal'].map(k => {
-                const labels = { prot: 'Proteína', fat: 'Gordura', carb: 'Carboidrato', kcal: 'Calorias' };
-                const color = getColorClass(tot[k], LIMITS[k]);
-                return `
-                    <div class="flex flex-col">
-                        <span class="text-[10px] font-bold uppercase text-gray-400">${labels[k]}</span>
-                        <div class="flex items-baseline gap-1">
-                            <span class="text-xl font-black">${Math.round(tot[k])}</span>
-                            <span class="text-xs meta-gray">/ ${LIMITS[k].ideal}</span>
-                        </div>
-                        <div class="h-1.5 w-full bg-gray-200 mt-1 rounded-full overflow-hidden">
-                            <div class="h-full bg-current ${color}" style="width: ${Math.min((tot[k]/LIMITS[k].max)*100, 100)}%"></div>
-                        </div>
-                    </div>`;
-            }).join('');
+function salvarAlimentosStorage(){ try{ localStorage.setItem('alimentos_v2', JSON.stringify(alimentos)); }catch(e){console.error(e)} }
+function salvarDiarioStorage(){ try{ localStorage.setItem('diario', JSON.stringify(diario)); }catch(e){console.error(e)} }
+function salvarMetasStorage(){ try{ localStorage.setItem('metas', JSON.stringify(metas)); }catch(e){console.error(e)} }
 
-            document.getElementById('current-fiber').innerText = `${tot.fib.toFixed(1)}g`;
-            renderMeals();
-        }
+function statusClass(v, faixa){ if(v < faixa[0]) return 'low'; if(v > faixa[1]) return 'high'; return 'ok'; }
 
-        function renderMeals() {
-            const container = document.getElementById('refeicoes-container');
-            container.innerHTML = '';
-            let diff = { prot: 0, carb: 0, fat: 0, kcal: 0 };
+function calcMacros(alim, qtd){
+  if(alim.tipo === 'unidade'){
+    return { kcal: alim.kcal * qtd, carb: alim.carb * qtd, prot: alim.prot * qtd, gord: alim.gord * qtd };
+  }
+  const f = qtd / 100;
+  return { kcal: alim.kcal * f, carb: alim.carb * f, prot: alim.prot * f, gord: alim.gord * f };
+}
 
-            meals.forEach((meal, idx) => {
-                const curr = meal.selectedFoods.reduce((a, f) => {
-                    a.p += f.prot; a.c += f.carb; a.g += f.fat; a.k += f.kcal; a.f += (f.fib || 0); return a;
-                }, { p: 0, c: 0, g: 0, k: 0, f: 0 });
+function descricaoQtd(it){
+  if(it.alim.tipo === 'unidade'){
+    const total = (it.alim.tamanho * it.qtd).toFixed(0);
+    const medida = it.alim.medida || 'g';
+    if(it.qtd === 1) return `1 unidade (${total}${medida})`;
+    return `${it.qtd}× ${it.alim.tamanho}${medida} (${total}${medida})`;
+  }
+  return `${it.qtd}g`;
+}
 
-                const adj = {
-                    p: meal.target.prot + diff.prot,
-                    c: meal.target.carb + diff.carb,
-                    g: meal.target.fat + diff.fat,
-                    k: meal.target.kcal + diff.kcal
-                };
+function renderTudo(){ renderResumo(); renderRefeicoes(); renderListaAlim(); renderMetasForm(); }
 
-                const rem = meals.length - (idx + 1);
-                if (rem > 0) {
-                    diff.prot = (adj.p - curr.p) / rem; diff.carb = (adj.c - curr.c) / rem;
-                    diff.fat = (adj.g - curr.g) / rem; diff.kcal = (adj.k - curr.k) / rem;
-                }
+function renderResumo(){
+  let tk=0,tc=0,tp=0,tg=0;
+  diario.forEach(ref => ref.forEach(it => { const m = calcMacros(it.alim, it.qtd); tk+=m.kcal; tc+=m.carb; tp+=m.prot; tg+=m.gord; }));
+  document.getElementById('resumo').innerHTML = `
+    <div class="r-card"><span class="r-label">Calorias</span><div class="r-value ${statusClass(tk,metas.kcal)}">${tk.toFixed(0)}<span class="r-meta">alvo ${metas.kcal[0]}–${metas.kcal[1]}</span></div></div>
+    <div class="r-card"><span class="r-label">Carboidrato</span><div class="r-value ${statusClass(tc,metas.carb)}">${tc.toFixed(1)}g<span class="r-meta">alvo ${metas.carb[0]}–${metas.carb[1]}</span></div></div>
+    <div class="r-card"><span class="r-label">Proteína</span><div class="r-value ${statusClass(tp,metas.prot)}">${tp.toFixed(1)}g<span class="r-meta">alvo ${metas.prot[0]}–${metas.prot[1]}</span></div></div>
+    <div class="r-card"><span class="r-label">Gordura</span><div class="r-value ${statusClass(tg,metas.gord)}">${tg.toFixed(1)}g<span class="r-meta">alvo ${metas.gord[0]}–${metas.gord[1]}</span></div></div>`;
+}
 
-                const div = document.createElement('div');
-                div.className = "meal-card bg-white rounded-xl shadow p-5 border-l-8 border-black";
-                div.innerHTML = `
-                    <div class="flex flex-col md:flex-row justify-between mb-4 border-b pb-2">
-                        <h2 class="text-lg font-bold">${meal.name}</h2>
-                        <div class="text-right">
-                            <p class="text-[10px] text-black font-bold uppercase">META: P:${Math.round(adj.p)}g C:${Math.round(adj.c)}g G:${Math.round(adj.g)}g | ${Math.round(adj.k)}kcal</p>
-                            <p class="text-xs ${curr.p >= adj.p ? 'text-black font-bold' : 'meta-gray'} uppercase font-bold">OBTIDO: P:${curr.p.toFixed(1)} C:${curr.c.toFixed(1)} G:${curr.g.toFixed(1)} | F: ${curr.f.toFixed(1)}g</p>
-                        </div>
-                    </div>
-                    <div class="space-y-2 mb-4">
-                        ${meal.selectedFoods.map((f, i) => `
-                            <div class="flex justify-between items-center bg-gray-50 p-2 px-3 rounded text-sm">
-                                <div><span class="block font-medium">${f.name}</span><span class="text-[10px] text-gray-500 block uppercase">P: ${f.prot}g | C: ${f.carb}g | G: ${f.fat}g | F: ${f.fib}g</span></div>
-                                <button onclick="removeFood(${idx}, ${i})" class="text-red-400 p-1 no-print">✕</button>
-                            </div>`).join('')}
-                    </div>
-                    <div class="no-print">
-                        <select onchange="addFood(${idx}, this)" class="w-full p-2 bg-gray-50 border border-gray-300 rounded-lg text-sm">
-                            <option value="">+ Adicionar Alimento...</option>
-                            ${FOODS.map((f, i) => `<option value="${i}">${f.name}</option>`).join('')}
-                        </select>
-                    </div>`;
-                container.appendChild(div);
-            });
-        }
+function renderRefeicoes(){
+  const cont = document.getElementById('refeicoes');
+  cont.innerHTML = '';
+  NOMES_REF.forEach((nome, rIdx) => {
+    let rk=0,rc=0,rp=0,rg=0;
+    const itemsHtml = diario[rIdx].map((it, iIdx) => {
+      const m = calcMacros(it.alim, it.qtd);
+      rk+=m.kcal; rc+=m.carb; rp+=m.prot; rg+=m.gord;
+      return `<div class="item"><span class="item-name">${it.alim.n} <span class="item-peso">· ${descricaoQtd(it)} · ${m.kcal.toFixed(0)} kcal</span></span><div class="tags"><span class="tag">C ${m.carb.toFixed(1)}g</span><span class="tag">P ${m.prot.toFixed(1)}g</span><span class="tag">G ${m.gord.toFixed(1)}g</span></div><button class="btn-del no-print" onclick="removerItem(${rIdx},${iIdx})">✕</button></div>`;
+    }).join('');
 
-        function addFood(mIdx, sel) { if(sel.value !== "") { meals[mIdx].selectedFoods.push({...FOODS[sel.value]}); updateUI(); } }
-        function removeFood(mIdx, fIdx) { meals[mIdx].selectedFoods.splice(fIdx, 1); updateUI(); }
+    const opts = alimentos.map((a,i)=>({a,i})).sort((x,y)=>x.a.n.localeCompare(y.a.n,'pt')).map(({a,i})=>`<option value="${i}">${a.n}${a.tipo==='unidade'?` (${a.tamanho}${a.medida||'g'})`:''}</option>`).join('');
 
-        updateUI();
-    </script>
-</body>
-</html>
+    cont.innerHTML += `
+      <div class="ref-card">
+        <div class="ref-head"><h2 class="ref-title">${nome}</h2><div class="macros-row"><span>${rk.toFixed(0)} kcal</span><span>C ${rc.toFixed(1)}g</span><span>P ${rp.toFixed(1)}g</span><span>G ${rg.toFixed(1)}g</span></div></div>
+        ${itemsHtml || '<div class="empty">Sem itens</div>'}
+        <div class="add-area no-print">
+          <select id="sel-${rIdx}" onchange="atualizarPlaceholder(${
