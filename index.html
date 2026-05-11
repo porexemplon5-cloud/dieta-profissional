@@ -170,6 +170,21 @@
 </div>
 
 <script>
+// Handler global de erros - mostra qualquer erro de JS na tela
+window.addEventListener('error', function(e){
+  const area = document.getElementById('erro-area');
+  if(area){
+    area.innerHTML = `<div class="reset-warning"><strong>Erro detectado:</strong><br>${e.message}<br><small>Arquivo: ${e.filename}, linha ${e.lineno}</small><br><button onclick="resetarTudo()">Resetar Tudo</button></div>`;
+  } else {
+    // DOM ainda não pronto - cria um div básico
+    document.body.insertAdjacentHTML('afterbegin', `<div style="background:#fee;border:2px solid #c00;color:#900;padding:12px;margin:10px;font-family:monospace;font-size:13px"><strong>Erro:</strong> ${e.message}<br>linha ${e.lineno}<br><button onclick="localStorage.clear();location.reload()" style="margin-top:8px;padding:6px 12px;background:#900;color:#fff;border:none;border-radius:4px">Limpar tudo e recarregar</button></div>`);
+  }
+});
+window.addEventListener('unhandledrejection', function(e){
+  const area = document.getElementById('erro-area');
+  if(area) area.innerHTML = `<div class="reset-warning"><strong>Erro (promise):</strong> ${e.reason}<br><button onclick="resetarTudo()">Resetar Tudo</button></div>`;
+});
+
 // ===================== ESTADO =====================
 let alimentos = [];
 let diario = [[],[],[],[]];
@@ -298,27 +313,4 @@ function carregarTudo(){
         })));
       }
     }
-  }catch(e){ console.error('Erro ao carregar diário:', e); diario = [[],[],[],[]]; }
-
-  renderTudo();
-}
-
-function salvarAlimentosStorage(){ try{ localStorage.setItem('alimentos_v2', JSON.stringify(alimentos)); }catch(e){ mostrarErro('Erro ao salvar alimentos'); } }
-function salvarDiarioStorage(){ try{ localStorage.setItem('diario', JSON.stringify(diario)); }catch(e){ mostrarErro('Erro ao salvar diário'); } }
-function salvarMetasStorage(){ try{ localStorage.setItem('metas', JSON.stringify(metas)); }catch(e){ mostrarErro('Erro ao salvar metas'); } }
-
-function mostrarErro(msg){
-  document.getElementById('erro-area').innerHTML = `<div class="reset-warning">${msg}. Se o problema persistir, clique em "Resetar Tudo" na aba Metas.</div>`;
-  setTimeout(()=>{ document.getElementById('erro-area').innerHTML = ''; }, 5000);
-}
-
-function resetarTudo(){
-  if(!confirm('Isso vai APAGAR todos os alimentos cadastrados, refeições do dia e metas. Tem certeza?')) return;
-  localStorage.removeItem('alimentos_v2');
-  localStorage.removeItem('diario');
-  localStorage.removeItem('metas');
-  location.reload();
-}
-
-// ===================== HELPERS =====================
-function statusClass(v, faixa){ if(v < faixa[0]) ret
+  }catch(e){ console.error('
